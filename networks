@@ -1,0 +1,61 @@
+import torch
+import torch.nn as nn
+
+
+class CNN(nn.Module):
+    def __init__(self, input_dim, cnum, device='cpu'):
+        super(CNN, self).__init__()
+        self.input_dim = input_dim
+        self.cnum = cnum
+        self.device = device
+
+        self.conv1 = nn.Conv2d(input_dim, cnum, kernel_size, stride, padding)
+        self.conv2 = nn.Conv2d(cnum, cnum, kernel_size, stride, padding)
+        self.maxpool1 = nn.MaxPool1d(kernel_size, stride)
+        self.conv3 = nn.Conv2d(cnum, cnum, kernel_size, stride, padding)
+        self.conv4 = nn.Conv2d(cnum, cnum, kernel_size, stride, padding)
+        self.maxpool2 = nn.MaxPool1d(kernel_size, stride)
+
+    def forward(self, x):
+        ####
+        return x
+
+
+class LSTM(nn.Module):
+    def __init__(self, input_size, hidden_size, num_layers, batch_size, device='cpu'):
+        super(LSTM, self).__init__()
+        self.input_size = input_size
+        self.hidden_size = hidden_size
+        self.num_layers = num_layers
+        self.batch_size = batch_size
+        self.device = device
+
+        self.LSTM = nn.LSTM(self.input_size, self.hidden_size, self.num_layers, batch_first=True, bidirectional=False)
+
+    def forward(self, x):
+        ###
+        return output, (h, c)
+
+
+
+class CnnLSTM(nn.Module):
+    def __init__(self, cnn_input, output_len, lstm_input, lstm_hidden, lstm_layers, batch_size, seq_len, device='cpu'):
+        super(CnnLSTM, self).__init__()
+        self.cnn_input = cnn_input
+        self.lstm_input = lstm_input
+        self.lstm_hidden = lstm_hidden
+        self.lstm_layers = lstm_layers
+        self.seq_len = seq_len
+        self.device = device
+
+        self.CNNunit = CNN(cnn_input, lstm_input)
+        self.linear = nn.Linear(seq_len, seq_len*2)
+        self.linear2 = nn.Linear(seq_len*2, seq_len)
+        self.LSTMunit = LSTM(lstm_input, lstm_hidden, lstm_layers, batch_size)
+        self.linear3 = nn.Linear(lstm_hidden * 2, output_len)
+        self.dropout = nn.Dropout(p=0.2)
+
+    def forward(self, x):
+        #####
+        return x
+
