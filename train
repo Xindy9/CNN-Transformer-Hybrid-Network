@@ -1,0 +1,57 @@
+import torch
+from torch.utils.data import DataLoader
+from data_set import SplitDataset  # 自定义数据集类
+import numpy as np
+import pandas as pd
+from Learner import Learner  # 自定义学习器类
+from Config import Config  # 自定义配置类
+from tqdm import tqdm
+from tensorboardX import SummaryWriter  # 可视化工具
+
+# 设置随机种子确保可重复性
+np.random.seed(0)
+torch.manual_seed(0)
+
+# 初始化配置
+args = Config()
+
+# 初始化学习器
+learner = Learner(args)
+
+# 数据加载和预处理
+
+# 数据集划分
+train_data, val_data, test_data = learner.split_data(data)
+
+# 创建数据集和数据加载器
+train_dataset = SplitDataset(train_data)
+val_dataset = SplitDataset(val_data)
+test_dataset = SplitDataset(test_data)
+
+train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=args.shuffle, num_workers=args.num_workers)
+val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=args.shuffle, num_workers=args.num_workers)
+test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=args.shuffle, num_workers=args.num_workers)
+
+if __name__ == '__main__':
+    # 初始化日志记录器（如果处于训练模式）
+    if args.train:
+        writer = SummaryWriter(args.log_path)
+        args.save_log()  # 保存配置日志
+    else:
+        writer = None
+
+    # 训练循环
+    for epoch in range(args.train_num):
+        # 训练阶段
+        for idx, (feature, label) in tqdm(enumerate(train_loader), total=len(train_loader)):
+            ######
+            
+            # 定期验证
+            if idx % args.n_val == 0 and idx != 0:
+                ######
+        
+        # 测试阶段
+        for idx_test, (feature_test, label_test) in enumerate(test_loader):
+        ######
+
+    # 保存结果和模型
