@@ -1,5 +1,7 @@
+import numpy as np
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 
 class CNN(nn.Module):
@@ -8,54 +10,75 @@ class CNN(nn.Module):
         self.input_dim = input_dim
         self.cnum = cnum
         self.device = device
-
+        #层归一化
         self.conv1 = nn.Conv2d(input_dim, cnum, kernel_size, stride, padding)
         self.conv2 = nn.Conv2d(cnum, cnum, kernel_size, stride, padding)
         self.maxpool1 = nn.MaxPool1d(kernel_size, stride)
         self.conv3 = nn.Conv2d(cnum, cnum, kernel_size, stride, padding)
         self.conv4 = nn.Conv2d(cnum, cnum, kernel_size, stride, padding)
         self.maxpool2 = nn.MaxPool1d(kernel_size, stride)
-
+        #全连接层调整维度
     def forward(self, x):
         ####
         return x
 
 
-class LSTM(nn.Module):
-    def __init__(self, input_size, hidden_size, num_layers, batch_size, device='cpu'):
-        super(LSTM, self).__init__()
-        self.input_size = input_size
-        self.hidden_size = hidden_size
-        self.num_layers = num_layers
-        self.batch_size = batch_size
-        self.device = device
+class CausalSelfAttention(nn.Module):
+    """
+    多头掩码自注意力机制层 + projection层
+    = nn.MultiheadAttention
+    """
 
-        self.LSTM = nn.LSTM(self.input_size, self.hidden_size, self.num_layers, batch_first=True, bidirectional=False)
+    def __init__(self, config):
+        super(CausalSelfAttention, self).__init__()
+        # 将嵌入层分成n_head份实现多头注意力机制
+        # 定义K,Q,V矩阵
+        self.key = nn.Linear(config.n_emb_dim, config.n_emb_dim)
+        self.query = nn.Linear(config.n_emb_dim, config.n_emb_dim)
+        self.value = nn.Linear(config.n_emb_dim, config.n_emb_dim)
+        # dropout
+        self.attn_drop = nn.Dropout(config.attn_drop)
+        self.resid_drop = nn.Dropout(config.resid_drop)
+        # projection层
+        self.proj = nn.Linear(config.n_emb_dim, config.n_emb_dim)
+        # todo:mask层含义
 
-    def forward(self, x):
-        ###
-        return output, (h, c)
-
-
-
-class CnnLSTM(nn.Module):
-    def __init__(self, cnn_input, output_len, lstm_input, lstm_hidden, lstm_layers, batch_size, seq_len, device='cpu'):
-        super(CnnLSTM, self).__init__()
-        self.cnn_input = cnn_input
-        self.lstm_input = lstm_input
-        self.lstm_hidden = lstm_hidden
-        self.lstm_layers = lstm_layers
-        self.seq_len = seq_len
-        self.device = device
-
-        self.CNNunit = CNN(cnn_input, lstm_input)
-        self.linear = nn.Linear(seq_len, seq_len*2)
-        self.linear2 = nn.Linear(seq_len*2, seq_len)
-        self.LSTMunit = LSTM(lstm_input, lstm_hidden, lstm_layers, batch_size)
-        self.linear3 = nn.Linear(lstm_hidden * 2, output_len)
-        self.dropout = nn.Dropout(p=0.2)
 
     def forward(self, x):
-        #####
+        """
+        :param x:输入到自注意力层的向量，格式[batch, time_seq_len, C_dim],C_dim表示输入的向量维度
+        :return:
+        """
+        Batch, Time_seq_len, C_dim = x.size()
+        # 计算KQV矩阵, 格式 [batch, n_head, time_seq_len, hidden_size]  transpose 交换维度
+        k = self.key(x).view(Batch, Time_seq_len, self.n_head, C_dim // self.n_head).transpose(1, 2)
+        q = self.query(x).view(Batch, Time_seq_len, self.n_head, C_dim // self.n_head).transpose(1, 2)
+        v = self.value(x).view(Batch, Time_seq_len, self.n_head, C_dim // self.n_head).transpose(1, 2)
+        # @ 运算符表示向量点积，只有tensor 或 ndarray 可以进行点积运算
+        # 使用负无穷填充矩阵，使softmax后的值为0
+        # 格式  [batch, n_head, time_seq_len, hidden_size]
+        # 把所有头的输出拼接起来
+        y = y.transpose(1, 2).contiguous().view(Batch, Time_seq_len, C_dim)
+        # 经过projection层
+        y = self.resid_drop(self.proj(y))
+        return y
+
+class Block(nn.Module):
+    """ Transformer block """
+
+    def __init__(self, config):
+        super(Block, self).__init__()
+        self.ln1 = nn.LayerNorm(config.n_emb_dim)
+        self.ln2 = nn.LayerNorm(config.n_emb_dim)
+        self.attn = CausalSelfAttention(config)
+        self.feed_forward = nn.Sequential()
+
+    def forward(self, x):
+
+        x = self.ln1(x)
+        y = self.attn(x)
+        x = x + y
+        x = x + self.feed_forward(self.ln2(x))
         return x
+
 
